@@ -3,15 +3,21 @@ import { SlidersHorizontal, X, Star, MapPin, IndianRupee } from 'lucide-react';
 import type { Salon, SearchFilters } from '@/types';
 import { SERVICES, LOCATIONS, BUDGETS, BUDGET_MAP } from '@/types';
 import SalonCard from './SalonCard';
+import { salonOffers } from '@/lib/match';
 
 interface ResultsProps {
   salons: Salon[];
   filters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
   onView: (id: string) => void;
+  locationState: 'idle' | 'loading' | 'granted' | 'denied';
+  onUseLocation: () => void;
 }
 
-export default function Results({ salons, filters, onFiltersChange, onView }: ResultsProps) {
+// Unknown values (null) sort to the end.
+const last = (v: number | null) => (v == null ? Number.MAX_SAFE_INTEGER : v);
+
+export default function Results({ salons, filters, onFiltersChange, onView, locationState, onUseLocation }: ResultsProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'relevance' | 'rating' | 'price' | 'distance'>('relevance');
 
@@ -19,34 +25,35 @@ export default function Results({ salons, filters, onFiltersChange, onView }: Re
     let result = [...salons];
 
     if (filters.service) {
-      result = result.filter((s) => s.services.some((svc) => svc.name === filters.service));
+      result = result.filter((s) => salonOffers(s, filters.service));
     }
     if (filters.location) {
       result = result.filter((s) => s.area === filters.location);
     }
     if (filters.budget && filters.budget !== 'Any budget') {
       const max = BUDGET_MAP[filters.budget] ?? 999999;
-      result = result.filter((s) => s.startingPrice <= max);
+      // salons with no published price stay in the list
+      result = result.filter((s) => s.startingPrice == null || s.startingPrice <= max);
     }
     if (filters.rating > 0) {
-      result = result.filter((s) => s.rating >= filters.rating);
+      result = result.filter((s) => (s.rating ?? 0) >= filters.rating);
     }
     if (filters.maxDistance < 15) {
-      result = result.filter((s) => s.distanceKm <= filters.maxDistance);
+      result = result.filter((s) => s.distanceKm == null || s.distanceKm <= filters.maxDistance);
     }
 
     switch (sortBy) {
       case 'rating':
-        result.sort((a, b) => b.rating - a.rating);
+        result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
         break;
       case 'price':
-        result.sort((a, b) => a.startingPrice - b.startingPrice);
+        result.sort((a, b) => last(a.startingPrice) - last(b.startingPrice));
         break;
       case 'distance':
-        result.sort((a, b) => a.distanceKm - b.distanceKm);
+        result.sort((a, b) => last(a.distanceKm) - last(b.distanceKm));
         break;
       default:
-        result.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
+        result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || b.reviewCount - a.reviewCount);
     }
 
     return result;
@@ -80,6 +87,20 @@ export default function Results({ salons, filters, onFiltersChange, onView }: Re
           <p className="mt-1 text-sm text-ink-500">
             {filtered.length} {filtered.length === 1 ? 'salon' : 'salons'} found
           </p>
+          <button
+            onClick={onUseLocation}
+            disabled={locationState === 'loading' || locationState === 'granted'}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-accent-600 hover:text-accent-700 disabled:text-ink-400"
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            {locationState === 'granted'
+              ? 'Distances based on your location'
+              : locationState === 'loading'
+              ? 'Finding your location…'
+              : locationState === 'denied'
+              ? 'Location blocked – allow it in your browser to see distances'
+              : 'Use my location to see distances'}
+          </button>
         </div>
         <button
           onClick={() => setShowFilters(true)}

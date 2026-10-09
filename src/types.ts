@@ -1,6 +1,6 @@
 export interface SalonService {
   name: string;
-  price: number;
+  price: number | null; // null = price not published
   duration: string;
 }
 
@@ -12,10 +12,12 @@ export interface Salon {
   gallery: string[];
   locality: string;
   area: string;
-  distanceKm: number;
-  rating: number;
+  distanceKm: number | null; // null = unknown (no user location / no coordinates)
+  lat?: number | null;
+  lng?: number | null;
+  rating: number | null; // null = not rated yet
   reviewCount: number;
-  startingPrice: number;
+  startingPrice: number | null; // null = no prices published
   services: SalonService[];
   openHours: {
     [key: string]: string;

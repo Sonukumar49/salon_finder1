@@ -21,6 +21,8 @@ create table if not exists public.salons (
   address        text,
   about          text,
   tags           jsonb not null default '[]',
+  lat            numeric,                       -- latitude  (used for real distance)
+  lng            numeric,                       -- longitude
   created_at     timestamptz not null default now()
 );
 

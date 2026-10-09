@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { SALONS as DEMO_SALONS } from '@/data/salons';
+import { isOpenNow } from '@/lib/hours';
 import type { Salon } from '@/types';
 
 // Row shape of the `salons` table in Supabase (snake_case).
@@ -12,6 +13,8 @@ interface SalonRow {
   locality: string | null;
   area: string | null;
   distance_km: number | null;
+  lat: number | null;
+  lng: number | null;
   rating: number | null;
   review_count: number | null;
   starting_price: number | null;
@@ -27,6 +30,9 @@ interface SalonRow {
 }
 
 function rowToSalon(r: SalonRow): Salon {
+  const services = r.services ?? [];
+  const prices = services.map((s) => s.price).filter((p): p is number => typeof p === 'number');
+  const openHours = r.open_hours ?? {};
   return {
     id: r.id,
     name: r.name,
@@ -35,13 +41,15 @@ function rowToSalon(r: SalonRow): Salon {
     gallery: r.gallery ?? [],
     locality: r.locality ?? '',
     area: r.area ?? '',
-    distanceKm: Number(r.distance_km ?? 0),
-    rating: Number(r.rating ?? 0),
+    distanceKm: null, // computed in the app from the visitor's location
+    lat: r.lat != null ? Number(r.lat) : null,
+    lng: r.lng != null ? Number(r.lng) : null,
+    rating: r.rating != null ? Number(r.rating) : null,
     reviewCount: r.review_count ?? 0,
-    startingPrice: r.starting_price ?? 0,
-    services: r.services ?? [],
-    openHours: r.open_hours ?? {},
-    isOpen: r.is_open ?? true,
+    startingPrice: r.starting_price ?? (prices.length ? Math.min(...prices) : null),
+    services,
+    openHours,
+    isOpen: isOpenNow(openHours), // computed from opening hours, India time
     phone: r.phone ?? '',
     whatsapp: r.whatsapp ?? '',
     website: r.website ?? '',

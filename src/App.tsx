@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import Results from '@/components/Results';
@@ -7,6 +7,8 @@ import Footer from '@/components/Footer';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { useSalons } from '@/hooks/useSalons';
 import type { Salon } from '@/types';
+import { distanceKm } from '@/lib/geo';
+import SalonImage from '@/components/SalonImage';
 import type { SearchFilters } from '@/types';
 
 type Page = 'home' | 'explore' | 'detail' | 'services' | 'areas' | 'about' | 'contact' | 'privacy' | 'terms';
@@ -20,7 +22,38 @@ const DEFAULT_FILTERS: SearchFilters = {
 };
 
 function App() {
-  const { salons, loading } = useSalons();
+  const { salons: rawSalons, loading } = useSalons();
+  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationState, setLocationState] = useState<'idle' | 'loading' | 'granted' | 'denied'>('idle');
+
+  const handleUseLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationState('denied');
+      return;
+    }
+    setLocationState('loading');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocationState('granted');
+      },
+      () => setLocationState('denied'),
+      { timeout: 10000 }
+    );
+  }, []);
+
+  // Real distance from the visitor, for salons that have coordinates.
+  const salons = useMemo(
+    () =>
+      userLoc
+        ? rawSalons.map((s) =>
+            s.lat != null && s.lng != null
+              ? { ...s, distanceKm: distanceKm(userLoc.lat, userLoc.lng, s.lat, s.lng) }
+              : s
+          )
+        : rawSalons,
+    [rawSalons, userLoc]
+  );
   const [page, setPage] = useState<Page>('home');
   const [selectedSalonId, setSelectedSalonId] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS);
@@ -96,6 +129,8 @@ function App() {
           filters={filters}
           onFiltersChange={setFilters}
           onView={handleViewSalon}
+          locationState={locationState}
+          onUseLocation={handleUseLocation}
         />
       )}
 
@@ -125,7 +160,7 @@ function FeaturedSection({
   onView: (id: string) => void;
   onExplore: () => void;
 }) {
-  const topSalons = [...salons].sort((a, b) => b.rating - a.rating).slice(0, 3);
+  const topSalons = [...salons].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, 3);
 
   return (
     <section className="py-16 bg-white">
@@ -156,16 +191,17 @@ function FeaturedSection({
               className="card-base overflow-hidden text-left hover:shadow-xl group"
             >
               <div className="relative h-48 overflow-hidden">
-                <img
+                <SalonImage
                   src={salon.image}
-                  alt={salon.name}
+                  name={salon.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
                 />
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-sm px-2.5 py-1 text-xs font-semibold text-ink-800">
-                  <Star className="h-3.5 w-3.5 fill-accent-500 text-accent-500" />
-                  {salon.rating}
-                </div>
+                {salon.rating != null && (
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-sm px-2.5 py-1 text-xs font-semibold text-ink-800">
+                    <Star className="h-3.5 w-3.5 fill-accent-500 text-accent-500" />
+                    {salon.rating}
+                  </div>
+                )}
               </div>
               <div className="p-4">
                 <h3 className="font-display text-lg font-semibold text-ink-950 mb-1">{salon.name}</h3>
@@ -173,7 +209,9 @@ function FeaturedSection({
                   <MapPin className="h-3.5 w-3.5" />
                   {salon.area}
                 </div>
-                <p className="mt-2 text-sm text-ink-400">Starting from ₹{salon.startingPrice}</p>
+                <p className="mt-2 text-sm text-ink-400">
+                  {salon.startingPrice != null ? `Starting from ₹${salon.startingPrice}` : 'Price on request'}
+                </p>
               </div>
             </button>
           ))}

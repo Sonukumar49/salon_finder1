@@ -1,6 +1,8 @@
 import { Star, MapPin, Phone, MessageCircle, ArrowRight } from 'lucide-react';
 import type { Salon, SearchFilters } from '@/types';
 import { BUDGET_MAP } from '@/types';
+import { salonOffers } from '@/lib/match';
+import SalonImage from './SalonImage';
 
 interface SalonCardProps {
   salon: Salon;
@@ -15,17 +17,18 @@ export default function SalonCard({ salon, filters, onView }: SalonCardProps) {
     <div className="card-base overflow-hidden hover:shadow-xl group flex flex-col">
       {/* Image */}
       <div className="relative h-52 overflow-hidden">
-        <img
+        <SalonImage
           src={salon.image}
-          alt={salon.name}
+          name={salon.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
         />
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-sm px-2.5 py-1 text-xs font-semibold text-ink-800 shadow-sm">
-          <Star className="h-3.5 w-3.5 fill-accent-500 text-accent-500" />
-          {salon.rating}
-          <span className="text-ink-400 font-normal">({salon.reviewCount})</span>
-        </div>
+        {salon.rating != null && (
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-sm px-2.5 py-1 text-xs font-semibold text-ink-800 shadow-sm">
+            <Star className="h-3.5 w-3.5 fill-accent-500 text-accent-500" />
+            {salon.rating}
+            {salon.reviewCount > 0 && <span className="text-ink-400 font-normal">({salon.reviewCount})</span>}
+          </div>
+        )}
         <div
           className={`absolute top-3 right-3 rounded-full px-2.5 py-1 text-xs font-medium shadow-sm ${
             salon.isOpen
@@ -52,8 +55,12 @@ export default function SalonCard({ salon, filters, onView }: SalonCardProps) {
             <MapPin className="h-3.5 w-3.5" />
             {salon.area}
           </span>
-          <span className="text-ink-200">|</span>
-          <span>{salon.distanceKm} km away</span>
+          {salon.distanceKm != null && (
+            <>
+              <span className="text-ink-200">|</span>
+              <span>{salon.distanceKm} km away</span>
+            </>
+          )}
         </div>
 
         {/* Services tags */}
@@ -72,8 +79,14 @@ export default function SalonCard({ salon, filters, onView }: SalonCardProps) {
 
         {/* Price */}
         <div className="flex items-baseline gap-1 mb-3">
-          <span className="text-xs text-ink-400">Starting from</span>
-          <span className="text-lg font-semibold text-ink-950">₹{salon.startingPrice}</span>
+          {salon.startingPrice != null ? (
+            <>
+              <span className="text-xs text-ink-400">Starting from</span>
+              <span className="text-lg font-semibold text-ink-950">₹{salon.startingPrice}</span>
+            </>
+          ) : (
+            <span className="text-sm text-ink-400">Price on request</span>
+          )}
         </div>
 
         {/* Match reasons */}
@@ -100,22 +113,26 @@ export default function SalonCard({ salon, filters, onView }: SalonCardProps) {
             View Salon
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" />
           </button>
-          <a
-            href={`tel:${salon.phone.replace(/\s/g, '')}`}
-            className="rounded-full border border-ink-200 p-2.5 text-ink-600 transition-all hover:border-ink-300 hover:bg-ink-50"
-            aria-label="Call salon"
-          >
-            <Phone className="h-4 w-4" />
-          </a>
-          <a
-            href={`https://wa.me/${salon.whatsapp.replace(/\D/g, '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-green-200 bg-green-50 p-2.5 text-green-600 transition-all hover:bg-green-100"
-            aria-label="WhatsApp salon"
-          >
-            <MessageCircle className="h-4 w-4" />
-          </a>
+          {salon.phone && (
+            <a
+              href={`tel:${salon.phone.replace(/\s/g, '')}`}
+              className="rounded-full border border-ink-200 p-2.5 text-ink-600 transition-all hover:border-ink-300 hover:bg-ink-50"
+              aria-label="Call salon"
+            >
+              <Phone className="h-4 w-4" />
+            </a>
+          )}
+          {salon.whatsapp && (
+            <a
+              href={`https://wa.me/${salon.whatsapp.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-green-200 bg-green-50 p-2.5 text-green-600 transition-all hover:bg-green-100"
+              aria-label="WhatsApp salon"
+            >
+              <MessageCircle className="h-4 w-4" />
+            </a>
+          )}
         </div>
       </div>
     </div>
@@ -127,31 +144,30 @@ function getMatchReasons(salon: Salon, filters: SearchFilters): string[] {
 
   if (filters.budget && filters.budget !== 'Any budget') {
     const max = BUDGET_MAP[filters.budget] ?? 999999;
-    if (salon.startingPrice <= max) {
+    if (salon.startingPrice != null && salon.startingPrice <= max) {
       reasons.push(`Within your budget (${filters.budget})`);
     }
   }
 
   if (filters.location && salon.area === filters.location) {
     reasons.push(`Located in ${filters.location}`);
-  } else if (filters.location && salon.distanceKm <= 5) {
+  } else if (filters.location && salon.distanceKm != null && salon.distanceKm <= 5) {
     reasons.push(`Near ${filters.location}`);
   }
 
   if (filters.service) {
-    const hasService = salon.services.some((s) => s.name === filters.service);
-    if (hasService) {
+    if (salonOffers(salon, filters.service)) {
       reasons.push(`Offers ${filters.service}`);
     }
   }
 
-  if (salon.rating >= 4.5) {
+  if (salon.rating != null && salon.rating >= 4.5) {
     reasons.push('Highly rated');
-  } else if (salon.rating >= 4.0) {
+  } else if (salon.rating != null && salon.rating >= 4.0) {
     reasons.push('Well rated');
   }
 
-  if (salon.distanceKm <= 3) {
+  if (salon.distanceKm != null && salon.distanceKm <= 3) {
     reasons.push('Very close to you');
   }
 
