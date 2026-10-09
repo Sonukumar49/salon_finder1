@@ -5,7 +5,8 @@ import Results from '@/components/Results';
 import SalonDetail from '@/components/SalonDetail';
 import Footer from '@/components/Footer';
 import PlaceholderPage from '@/components/PlaceholderPage';
-import { SALONS } from '@/data/salons';
+import { useSalons } from '@/hooks/useSalons';
+import type { Salon } from '@/types';
 import type { SearchFilters } from '@/types';
 
 type Page = 'home' | 'explore' | 'detail' | 'services' | 'areas' | 'about' | 'contact' | 'privacy' | 'terms';
@@ -19,12 +20,13 @@ const DEFAULT_FILTERS: SearchFilters = {
 };
 
 function App() {
+  const { salons, loading } = useSalons();
   const [page, setPage] = useState<Page>('home');
   const [selectedSalonId, setSelectedSalonId] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const selectedSalon = SALONS.find((s) => s.id === selectedSalonId);
+  const selectedSalon = salons.find((s) => s.id === selectedSalonId);
 
   const handleSearch = useCallback((service: string, location: string, budget: string) => {
     setFilters({ ...DEFAULT_FILTERS, service, location, budget });
@@ -80,13 +82,17 @@ function App() {
       {showHome && (
         <>
           <Hero onSearch={handleSearch} onExplore={handleExplore} />
-          <FeaturedSection onView={handleViewSalon} onExplore={handleExplore} />
+          <FeaturedSection salons={salons} loading={loading} onView={handleViewSalon} onExplore={handleExplore} />
         </>
       )}
 
-      {showExplore && (
+      {showExplore && loading && (
+        <div className="py-32 text-center text-ink-500">Loading salons…</div>
+      )}
+
+      {showExplore && !loading && (
         <Results
-          salons={SALONS}
+          salons={salons}
           filters={filters}
           onFiltersChange={setFilters}
           onView={handleViewSalon}
@@ -109,13 +115,17 @@ function App() {
 import { Star, MapPin, ArrowRight } from 'lucide-react';
 
 function FeaturedSection({
+  salons,
+  loading,
   onView,
   onExplore,
 }: {
+  salons: Salon[];
+  loading: boolean;
   onView: (id: string) => void;
   onExplore: () => void;
 }) {
-  const topSalons = [...SALONS].sort((a, b) => b.rating - a.rating).slice(0, 3);
+  const topSalons = [...salons].sort((a, b) => b.rating - a.rating).slice(0, 3);
 
   return (
     <section className="py-16 bg-white">
@@ -135,6 +145,8 @@ function FeaturedSection({
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
+
+        {loading && <p className="text-ink-500">Loading salons…</p>}
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {topSalons.map((salon) => (
