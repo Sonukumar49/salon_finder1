@@ -2,12 +2,20 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, MapPin, IndianRupee, ChevronDown, Sparkles, ArrowRight } from 'lucide-react';
 import { SERVICES, LOCATIONS, BUDGETS } from '@/types';
 
+export interface HeroStats {
+  salons: number;
+  areaLabel: string;
+  avgRating: number | null;
+}
+
 interface HeroProps {
   onSearch: (service: string, location: string, budget: string) => void;
   onExplore: () => void;
+  areas?: string[];
+  stats?: HeroStats;
 }
 
-export default function Hero({ onSearch, onExplore }: HeroProps) {
+export default function Hero({ onSearch, onExplore, areas, stats }: HeroProps) {
   const [service, setService] = useState('');
   const [location, setLocation] = useState('');
   const [budget, setBudget] = useState('');
@@ -71,7 +79,7 @@ export default function Hero({ onSearch, onExplore }: HeroProps) {
                   placeholder="Indiranagar..."
                   value={location}
                   onChange={setLocation}
-                  options={LOCATIONS as readonly string[]}
+                  options={areas && areas.length > 0 ? areas : (LOCATIONS as readonly string[])}
                 />
                 <SearchField
                   icon={<IndianRupee className="h-4 w-4" />}
@@ -118,30 +126,34 @@ export default function Hero({ onSearch, onExplore }: HeroProps) {
               </div>
 
               {/* Floating card 1 - Rating */}
+              {stats && stats.avgRating != null && (
               <div
                 className="absolute -top-4 -left-4 sm:-top-6 sm:-left-6 rounded-2xl bg-white shadow-xl p-3 sm:p-4 animate-float-slow"
                 style={{ transform: 'translateZ(80px)' }}
               >
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-accent-500 text-white">
-                    <span className="text-lg sm:text-xl font-bold leading-none">4.7</span>
+                    <span className="text-lg sm:text-xl font-bold leading-none">{stats.avgRating.toFixed(1)}</span>
                   </div>
                   <div>
                     <p className="text-xs text-ink-400">Avg rating</p>
-                    <p className="text-xs sm:text-sm font-semibold text-ink-800">Top rated salons</p>
+                    <p className="text-xs sm:text-sm font-semibold text-ink-800">Across listed salons</p>
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Floating card 2 - Salon count */}
+              {stats && stats.salons > 0 && (
               <div
                 className="absolute -bottom-4 -right-4 sm:-bottom-6 sm:-right-6 rounded-2xl bg-white shadow-xl p-3 sm:p-4 animate-float-medium"
                 style={{ transform: 'translateZ(60px)' }}
               >
-                <p className="text-2xl sm:text-3xl font-display font-semibold text-ink-950">18+</p>
-                <p className="text-xs text-ink-400">Salons across</p>
-                <p className="text-xs text-ink-400">10 Bengaluru areas</p>
+                <p className="text-2xl sm:text-3xl font-display font-semibold text-ink-950">{stats.salons}</p>
+                <p className="text-xs text-ink-400">Salons in</p>
+                <p className="text-xs text-ink-400">{stats.areaLabel}</p>
               </div>
+              )}
 
               {/* Floating element - Sparkle */}
               <div

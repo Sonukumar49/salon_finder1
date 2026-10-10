@@ -26,6 +26,19 @@ function App() {
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [locationState, setLocationState] = useState<'idle' | 'loading' | 'granted' | 'denied'>('idle');
 
+  const areaList = useMemo(
+    () => [...new Set(rawSalons.map((s) => s.area).filter(Boolean))].sort(),
+    [rawSalons]
+  );
+  const heroStats = useMemo(() => {
+    const rated = rawSalons.filter((s) => s.rating != null) as (typeof rawSalons[number] & { rating: number })[];
+    return {
+      salons: rawSalons.length,
+      areaLabel: areaList.length === 1 ? areaList[0] : `${areaList.length} Bengaluru areas`,
+      avgRating: rated.length ? rated.reduce((a, s) => a + s.rating, 0) / rated.length : null,
+    };
+  }, [rawSalons, areaList]);
+
   const handleUseLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationState('denied');
@@ -114,7 +127,7 @@ function App() {
 
       {showHome && (
         <>
-          <Hero onSearch={handleSearch} onExplore={handleExplore} />
+          <Hero onSearch={handleSearch} onExplore={handleExplore} areas={areaList} stats={heroStats} />
           <FeaturedSection salons={salons} loading={loading} onView={handleViewSalon} onExplore={handleExplore} />
         </>
       )}

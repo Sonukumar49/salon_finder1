@@ -21,6 +21,11 @@ export default function Results({ salons, filters, onFiltersChange, onView, loca
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'relevance' | 'rating' | 'price' | 'distance'>('relevance');
 
+  const areaList = useMemo(
+    () => [...new Set(salons.map((s) => s.area).filter(Boolean))].sort(),
+    [salons]
+  );
+
   const filtered = useMemo(() => {
     let result = [...salons];
 
@@ -128,7 +133,7 @@ export default function Results({ salons, filters, onFiltersChange, onView, loca
                 </button>
               )}
             </div>
-            <FilterContent filters={filters} onFiltersChange={onFiltersChange} />
+            <FilterContent filters={filters} onFiltersChange={onFiltersChange} areaList={areaList} />
           </div>
         </aside>
 
@@ -144,7 +149,7 @@ export default function Results({ salons, filters, onFiltersChange, onView, loca
                 </button>
               </div>
               <div className="p-5">
-                <FilterContent filters={filters} onFiltersChange={onFiltersChange} />
+                <FilterContent filters={filters} onFiltersChange={onFiltersChange} areaList={areaList} />
                 <button
                   onClick={() => setShowFilters(false)}
                   className="btn-primary w-full mt-6"
@@ -221,9 +226,11 @@ function Pill({ label, onRemove }: { label: string; onRemove: () => void }) {
 function FilterContent({
   filters,
   onFiltersChange,
+  areaList,
 }: {
   filters: SearchFilters;
   onFiltersChange: (f: SearchFilters) => void;
+  areaList: string[];
 }) {
   return (
     <div className="space-y-5">
@@ -247,7 +254,7 @@ function FilterContent({
           className="w-full rounded-xl border border-ink-200 bg-ink-50/50 px-3 py-2 text-sm text-ink-800 focus:outline-none focus:border-accent-400"
         >
           <option value="">Any location</option>
-          {LOCATIONS.map((l) => (
+          {(areaList.length > 0 ? areaList : [...LOCATIONS]).map((l) => (
             <option key={l} value={l}>{l}</option>
           ))}
         </select>
