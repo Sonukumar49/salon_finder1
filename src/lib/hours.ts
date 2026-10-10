@@ -59,3 +59,13 @@ export function isOpenNow(openHours: Record<string, string>, now: Date = new Dat
   if (end === start) return false;
   return end > start ? nowMin >= start && nowMin < end : nowMin >= start || nowMin < end;
 }
+
+/** "9:00 PM" if the salon is open right now and has a closing time today, else null. */
+export function closingTimeToday(openHours: Record<string, string>, now: Date = new Date()): string | null {
+  if (!isOpenNow(openHours, now)) return null;
+  const day = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short' }).format(now);
+  const raw = (openHours[day] ?? '').trim();
+  if (ALWAYS_OPEN.test(raw)) return null;
+  const r = parseRange(raw);
+  return r ? fmt(r[1]) : null;
+}

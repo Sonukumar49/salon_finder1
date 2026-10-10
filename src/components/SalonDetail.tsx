@@ -1,18 +1,21 @@
 import { Star, MapPin, Phone, MessageCircle, Clock, Globe, Navigation, ArrowLeft, Check } from 'lucide-react';
-import type { Salon } from '@/types';
+import type { Salon, SearchFilters } from '@/types';
+import { explainMatch } from '@/lib/why';
+import WhyBox from './WhyBox';
 import { formatHours } from '@/lib/hours';
 import SalonImage from './SalonImage';
 
 interface SalonDetailProps {
   salon: Salon;
   onBack: () => void;
+  filters?: SearchFilters;
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const today = new Date().getDay(); // 0 = Sunday
 const todayLabel = today === 0 ? 'Sun' : DAYS[today - 1];
 
-export default function SalonDetail({ salon, onBack }: SalonDetailProps) {
+export default function SalonDetail({ salon, onBack, filters }: SalonDetailProps) {
   return (
     <div className="pt-16">
       {/* Back button */}
@@ -63,6 +66,10 @@ export default function SalonDetail({ salon, onBack }: SalonDetailProps) {
         <div className="grid lg:grid-cols-[1fr_320px] gap-8">
           {/* Main column */}
           <div className="space-y-8">
+            {filters && (
+              <WhyBox why={explainMatch(salon, filters)} />
+            )}
+
             {/* Quick info */}
             <div className="flex flex-wrap gap-4 text-sm text-ink-600">
               <span className="flex items-center gap-1.5">

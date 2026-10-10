@@ -148,7 +148,7 @@ function App() {
       )}
 
       {showDetail && selectedSalon && (
-        <SalonDetail salon={selectedSalon} onBack={handleBack} />
+        <SalonDetail salon={selectedSalon} onBack={handleBack} filters={filters} />
       )}
 
       {showPlaceholder && (

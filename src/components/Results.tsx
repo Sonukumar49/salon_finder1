@@ -4,6 +4,7 @@ import type { Salon, SearchFilters } from '@/types';
 import { SERVICES, LOCATIONS, BUDGETS, BUDGET_MAP } from '@/types';
 import SalonCard from './SalonCard';
 import { salonOffers } from '@/lib/match';
+import { explainMatch } from '@/lib/why';
 
 interface ResultsProps {
   salons: Salon[];
@@ -58,7 +59,12 @@ export default function Results({ salons, filters, onFiltersChange, onView, loca
         result.sort((a, b) => last(a.distanceKm) - last(b.distanceKm));
         break;
       default:
-        result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || b.reviewCount - a.reviewCount);
+        result.sort(
+          (a, b) =>
+            explainMatch(b, filters).score - explainMatch(a, filters).score ||
+            (b.rating ?? 0) - (a.rating ?? 0) ||
+            b.reviewCount - a.reviewCount
+        );
     }
 
     return result;
@@ -184,7 +190,7 @@ export default function Results({ salons, filters, onFiltersChange, onView, loca
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               className="rounded-full border border-ink-200 bg-white px-4 py-2 text-sm text-ink-700 focus:outline-none focus:border-accent-400"
             >
-              <option value="relevance">Sort: Relevance</option>
+              <option value="relevance">Sort: Best match for you</option>
               <option value="rating">Sort: Rating</option>
               <option value="price">Sort: Price (low to high)</option>
               <option value="distance">Sort: Distance</option>

@@ -1,7 +1,7 @@
 import { Star, MapPin, Phone, MessageCircle, ArrowRight } from 'lucide-react';
 import type { Salon, SearchFilters } from '@/types';
-import { BUDGET_MAP } from '@/types';
-import { salonOffers } from '@/lib/match';
+import { explainMatch } from '@/lib/why';
+import WhyBox from './WhyBox';
 import SalonImage from './SalonImage';
 
 interface SalonCardProps {
@@ -11,7 +11,7 @@ interface SalonCardProps {
 }
 
 export default function SalonCard({ salon, filters, onView }: SalonCardProps) {
-  const matchReasons = getMatchReasons(salon, filters);
+  const why = explainMatch(salon, filters);
 
   return (
     <div className="card-base overflow-hidden hover:shadow-xl group flex flex-col">
@@ -89,20 +89,8 @@ export default function SalonCard({ salon, filters, onView }: SalonCardProps) {
           )}
         </div>
 
-        {/* Match reasons */}
-        {matchReasons.length > 0 && (
-          <div className="rounded-xl bg-accent-50/50 border border-accent-100 p-3 mb-3">
-            <p className="text-xs font-semibold text-accent-700 mb-1.5">Why this matches</p>
-            <ul className="space-y-1">
-              {matchReasons.map((reason, i) => (
-                <li key={i} className="flex items-start gap-1.5 text-xs text-ink-600">
-                  <span className="text-accent-500 mt-0.5">•</span>
-                  {reason}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* Why this salon was shortlisted for this person */}
+        <WhyBox why={why} className="mb-3" />
 
         {/* Actions */}
         <div className="mt-auto flex items-center gap-2 pt-2">
@@ -137,39 +125,4 @@ export default function SalonCard({ salon, filters, onView }: SalonCardProps) {
       </div>
     </div>
   );
-}
-
-function getMatchReasons(salon: Salon, filters: SearchFilters): string[] {
-  const reasons: string[] = [];
-
-  if (filters.budget && filters.budget !== 'Any budget') {
-    const max = BUDGET_MAP[filters.budget] ?? 999999;
-    if (salon.startingPrice != null && salon.startingPrice <= max) {
-      reasons.push(`Within your budget (${filters.budget})`);
-    }
-  }
-
-  if (filters.location && salon.area === filters.location) {
-    reasons.push(`Located in ${filters.location}`);
-  } else if (filters.location && salon.distanceKm != null && salon.distanceKm <= 5) {
-    reasons.push(`Near ${filters.location}`);
-  }
-
-  if (filters.service) {
-    if (salonOffers(salon, filters.service)) {
-      reasons.push(`Offers ${filters.service}`);
-    }
-  }
-
-  if (salon.rating != null && salon.rating >= 4.5) {
-    reasons.push('Highly rated');
-  } else if (salon.rating != null && salon.rating >= 4.0) {
-    reasons.push('Well rated');
-  }
-
-  if (salon.distanceKm != null && salon.distanceKm <= 3) {
-    reasons.push('Very close to you');
-  }
-
-  return reasons.slice(0, 4);
 }

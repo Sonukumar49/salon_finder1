@@ -12,8 +12,23 @@ const ALIASES: Record<string, string[]> = {
   'Threading & Waxing': ['threading', 'waxing', 'wax'],
 };
 
+const keysFor = (service: string) => ALIASES[service] ?? [service.toLowerCase()];
+const hits = (names: string[], keys: string[]) =>
+  names.filter((n) => keys.some((k) => n.toLowerCase().includes(k)));
+
+/** How a salon offers a service: from its menu ('service'), only from its tags ('tag'), or not at all. */
+export function serviceEvidence(
+  salon: Salon,
+  service: string
+): { kind: 'service' | 'tag' | null; names: string[] } {
+  const keys = keysFor(service);
+  const fromMenu = hits(salon.services.map((s) => s.name), keys);
+  if (fromMenu.length) return { kind: 'service', names: fromMenu };
+  const fromTags = hits(salon.tags, keys);
+  if (fromTags.length) return { kind: 'tag', names: fromTags };
+  return { kind: null, names: [] };
+}
+
 export function salonOffers(salon: Salon, service: string): boolean {
-  const keys = ALIASES[service] ?? [service.toLowerCase()];
-  const hay = [...salon.services.map((s) => s.name), ...salon.tags].map((x) => x.toLowerCase());
-  return keys.some((k) => hay.some((h) => h.includes(k)));
+  return serviceEvidence(salon, service).kind !== null;
 }
